@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class Admin
+class AdminMiddleware
 {
     /**
      * Handle an incoming request.
@@ -15,10 +15,10 @@ class Admin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(\Auth::check() && \Auth::user()->is_active){
+        if(auth()->check() && auth()->user()->is_active){
             return $next($request);
         }
 
-        return redirect()->route('admin.signin')->with('error','Access denied!');
+        return redirect()->route('admin.login')->with('danger','Access denied!');
     }
 }

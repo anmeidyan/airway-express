@@ -2,35 +2,62 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Services\Interfaces\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
-{
-    public function signinForm(){
-        return view('auth.signin');
+{   
+    public function __construct(protected AuthServiceInterface $authService)
+    {
+        $this->authService = $authService;
     }
 
-    public function signinPost(Request $request){
+    public function registerForm(){
+        return view('admin.auth.register');
+    }
+
+    public function registerPost(Request $request){
         $validated = $request->validate([
-            'email' => 'required',
-            'password' => 'required',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6',
+            'password_confirm' => 'required|string|min:6|same:password',
         ]);
 
-        if (\Auth::attempt([
-            'email' => $validated['email'],
-            'password' => $validated['password'],
-            'status' => 1
-        ])){
-            $request->session()->regenerate();
+        $this->authService->register($validated);
+
+        return redirect()->route('admin.login')->with('success','Registration successful! Please login.');
+    }
+
+    public function loginForm(){
+        if(auth()->check()){
+            return redirect()->route('admin.dashboard');
+        }
+        
+        return view('admin.auth.login');
+    }
+
+    public function loginPost(Request $request){
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string|min:6',
+        ]);
+
+        $remember = $request->boolean('remember');
+
+        $auth = $this->authService->login($validated, $remember);
+
+        if($auth){
             return redirect()->route('admin.dashboard');
         }else{
-            return redirect()->route('admin.signin')->with('error','Access denied!');
+            return redirect()->route('admin.login')->with('danger','Access denied!');
         }
     }
 
-    public function signout(){
-        \Auth::logout();
-        return redirect()->route('admin.signin');
+    public function logout(Request $request){
+        $this->authService->logout($request);
+
+        return redirect()->route('admin.login');
     }
 }
